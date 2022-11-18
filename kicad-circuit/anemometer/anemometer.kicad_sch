@@ -2857,7 +2857,7 @@
     (property "Value" "TIP41" (id 1) (at 106.68 119.3799 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical" (id 2) (at 105.41 120.015 0)
+    (property "Footprint" "Package_TO_SOT_THT:TO-220-3_Horizontal_TabUp" (id 2) (at 105.41 120.015 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "https://www.centralsemi.com/get_document.php?cmp=1&mergetype=pd&mergepath=pd&pdf_id=tip41.PDF" (id 3) (at 111.76 118.11 0)
@@ -4127,7 +4127,7 @@
       (reference "Jw1") (unit 1) (value "Conn_01x02") (footprint "TerminalBlock:TerminalBlock_bornier-2_P5.08mm")
     )
     (path "/1f6a499a-1e9f-4ade-8afd-a1205c7b8f1e"
-      (reference "Q1") (unit 1) (value "TIP41") (footprint "Package_TO_SOT_THT:TO-220-3_Vertical")
+      (reference "Q1") (unit 1) (value "TIP41") (footprint "Package_TO_SOT_THT:TO-220-3_Horizontal_TabUp")
     )
     (path "/065ced61-e115-41c1-966a-4568244b436a"
       (reference "Q2") (unit 1) (value "2N3906") (footprint "Package_TO_SOT_THT:TO-92_Inline_Wide")
