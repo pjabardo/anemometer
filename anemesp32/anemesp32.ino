@@ -1,5 +1,8 @@
+#include "BluetoothSerial.h"
+
 // Get 1-wire Library here: http://www.pjrc.com/teensy/td_libs_OneWire.html
 #include <OneWire.h>
+
 
 //Get DallasTemperature Library here:  http://milesburton.com/Main_Page?title=Dallas_Temperature_Control_Library
 #include <DallasTemperature.h>
@@ -12,6 +15,12 @@
 Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
 Adafruit_Sensor *bmp_pressure = bmp.getPressureSensor();
+
+#define USE_BT
+
+#ifdef USE_BT
+BluetoothSerial SerialBT;
+#endif
 
 Adafruit_ADS1115 ads;
 
@@ -79,8 +88,12 @@ void setup_temp(){
 void setup()   /****** SETUP: RUNS ONCE ******/
 {
   // start serial port to show results
+#ifdef USE_BT
+  SerialBT.begin("AnemPJ");
+#else
   Serial.begin(9600);
-  
+#endif
+
   setup_bmp(0x76);
   setup_temp();
   setup_dht();
@@ -91,11 +104,17 @@ void setup()   /****** SETUP: RUNS ONCE ******/
 
 void clear_buffer(int ms=50){
 
+#ifdef USE_BT
+  while(SerialBT.available() > 0){
+    delay(ms);
+    SerialBT.readString();
+  }
+#else
   while(Serial.available() > 0){
     delay(ms);
     Serial.readString();
   }
-  
+#endif  
 }
 
 
@@ -110,6 +129,8 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
   float voltx;
   
   String s;  
+
+#ifndef USE_BT
   if (Serial.available() > 0){
     cmd = Serial.read();
     if (cmd == '%'){
@@ -118,6 +139,7 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
       return;
     }
     if (cmd != '*'){
+      
       Serial.print("ERR - Unknown command -->");
       Serial.println(cmd);
       Serial.flush();
@@ -229,6 +251,131 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
   Serial.flush();
 
   clear_buffer(); 
+
+#else
+
+  if (SerialBT.available() > 0){
+    cmd = SerialBT.read();
+    if (cmd == '%'){
+      SerialBT.flush();
+      clear_buffer(50);
+      return;
+    }
+    if (cmd != '*'){
+      
+      SerialBT.print("ERR - Unknown command -->");
+      SerialBT.println(cmd);
+      SerialBT.flush();
+      clear_buffer(50);
+      return;
+    }
+    delay(50);
+    foundvar = false;
+    for (int i = 0; i < 10; ++i){
+      if (SerialBT.available() <= 0){
+        delay(50);
+      }else{
+        foundvar = true;
+        break;
+      }
+    }
+    if (!foundvar){
+      SerialBT.println("ERR - No variable found");
+      SerialBT.flush();
+      clear_buffer(50);
+      return;
+    }
+    
+    var = SerialBT.read();
+    if (var != 'P' && var != 'H' && var != 'T' && var != 'S' && var != 'A'){
+      SerialBT.print("ERR - Unknown variable -->");
+      SerialBT.println(var);
+      SerialBT.flush();
+      clear_buffer(50);
+      return;
+    }
+
+    // Check variable specifier
+    delay(50);
+    foundvar = false;
+    for (int i = 0; i < 10; ++i){
+      if (SerialBT.available() <= 0){
+        delay(50);
+      }else{
+        foundvar = true;
+        break;
+      }
+    }
+    if (!foundvar){
+      SerialBT.println("ERR - No sub-variable found");
+      SerialBT.flush();
+      clear_buffer(50);
+      return;
+    }
+
+    var2 = SerialBT.read();
+
+    if (var == 'P'){
+      if (var2 == 'P'){
+        SerialBT.println(bmp.readPressure());
+        SerialBT.flush();
+      }else if (var2=='T'){
+        SerialBT.println(bmp.readTemperature());     
+        SerialBT.flush();
+      }else{
+        SerialBT.print("ERR - Variable does not exist. Only H or T available -->");
+        SerialBT.println(var2);
+        SerialBT.flush();
+      }
+    } else if (var == 'H'){
+      if (var2 == 'H'){
+        SerialBT.println(dht.readHumidity());
+        SerialBT.flush();
+      }else if (var2=='T'){
+        SerialBT.println(dht.readTemperature());     
+        SerialBT.flush();
+      }else{
+        SerialBT.print("ERR - Variable does not exist. Only T or P available -->");
+        SerialBT.println(var2);
+        SerialBT.flush();
+      }
+      
+    } else if (var == 'T'){
+      if (var2 < '1' || var2 > '5'){
+        SerialBT.print("ERR - Variable does not exist. 1-5 possible -->");
+        SerialBT.println(var2);
+        SerialBT.flush();
+      }else{
+        char idx = var2 - '1';
+        sensors.requestTemperatures();  
+        SerialBT.println(sensors.getTempC(probes[idx]));
+        SerialBT.flush();
+      }
+    }else if (var == 'A'){ // Analog input
+      if (var2 < '0' || var2 > '3'){
+        SerialBT.print("ERR - Analog input does not exist. 0-3 possible -->");
+        SerialBT.println(var2);
+        SerialBT.flush();
+      }else{
+        char idx = var2 - '0';
+        adcx = ads.readADC_SingleEnded(idx);
+        voltx = ads.computeVolts(adcx);
+        SerialBT.println(voltx);
+        SerialBT.flush();
+        
+      }
+      
+    }else if (var == 'S'){  // Status
+      SerialBT.println("OK");
+      SerialBT.flush();
+    }
+  }
+
+  SerialBT.flush();
+
+  clear_buffer(); 
+
+#endif  
 }
   
 
