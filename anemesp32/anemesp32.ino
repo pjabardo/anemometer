@@ -218,14 +218,17 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
       }
       
     } else if (var == 'T'){
-      if (var2 < '1' || var2 > '5'){
-        Serial.print("ERR - Variable does not exist. 1-5 possible -->");
-        Serial.println(var2);
-        Serial.flush();
-      }else{
-        char idx = var2 - '1';
+      if (var2 == 'C'){   // Device count
+       Serial.println(sensors.getDeviceCount());
+       Serial.flush();
+      }else if (var2 >= '0' && var2 <= '9'){
+        char idx = var2;
         sensors.requestTemperatures();  
         Serial.println(sensors.getTempC(probes[idx]));
+        Serial.flush();
+      }else{
+        Serial.print("ERR - Variable does not exist. 0-9 possible -->");
+        Serial.println(var2);
         Serial.flush();
       }
     }else if (var == 'A'){ // Analog input
@@ -341,26 +344,30 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
       }
       
     } else if (var == 'T'){
-      if (var2 < '1' || var2 > '5'){
-        SerialBT.print("ERR - Variable does not exist. 1-5 possible -->");
-        SerialBT.println(var2);
-        SerialBT.flush();
-      }else{
-        char idx = var2 - '1';
+      if (var2 == 'C'){   // Device count
+       SerialBT.println(sensors.getDeviceCount());
+       SerialBT.flush();
+      }else if (var2 >= '0' && var2 <= '9'){
+        char idx = var2 - '0';
         sensors.requestTemperatures();  
         SerialBT.println(sensors.getTempC(probes[idx]));
         SerialBT.flush();
+      }else{
+        SerialBT.print("ERR - Variable does not exist. 0-9 possible -->");
+        SerialBT.println(var2);
+        SerialBT.flush();
       }
+          
     }else if (var == 'A'){ // Analog input
       if (var2 < '0' || var2 > '3'){
         SerialBT.print("ERR - Analog input does not exist. 0-3 possible -->");
-        SerialBT.println(var2);
+        SerialBT.println(var2, 5);
         SerialBT.flush();
       }else{
         char idx = var2 - '0';
         adcx = ads.readADC_SingleEnded(idx);
         voltx = ads.computeVolts(adcx);
-        SerialBT.println(voltx);
+        SerialBT.println(voltx,5);
         SerialBT.flush();
         
       }
