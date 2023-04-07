@@ -24,6 +24,8 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_ADS1X15.h>
 
+#include "anemometer.h"
+
 Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_Sensor *bmp_temp = bmp.getTemperatureSensor();
 Adafruit_Sensor *bmp_pressure = bmp.getPressureSensor();
@@ -125,6 +127,8 @@ void setup_dht(){
  
 }
 
+Anemometer myanem(&Serial, &bmp, &ads, &sensors, &dht);
+
 void setup_temp(){
   sensors.begin();
   for (int i = 0; i < NPROBES; ++i)
@@ -151,7 +155,7 @@ setup_wifi(ssid, password);
   setup_temp();
   setup_dht();
   setup_ads(0x4A);
-  
+  Serial.println(sensors.getDeviceCount());
 
 }//--(end setup )---
 
@@ -280,8 +284,9 @@ void loop()   /****** LOOP: RUNS CONSTANTLY ******/
         Serial.flush();
       }else{
         char idx = var2 - '1';
-        sensors.requestTemperatures();  
-        Serial.println(sensors.getTempC(probes[idx]));
+        //sensors.requestTemperatures();  
+        sensors.requestTemperaturesByIndex(idx);
+        Serial.println(sensors.getTempCByIndex(idx));
         Serial.flush();
       }
     }else if (var == 'A'){ // Analog input
