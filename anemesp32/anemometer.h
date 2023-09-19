@@ -49,6 +49,7 @@ public:
    float read_pressure();
 
    float read_temperature(uint8_t idx);
+   int16_t read_aichan(uint8_t idx);
    
    void read_frame(int16_t *adcx);
 
@@ -124,6 +125,44 @@ public:
 
     return 0;
   }
+
+  int readcmd(String cmd){
+    cmd.trim();
+    comm_->println(cmd);
+    if (cmd=="P"){
+      comm_->println("1");
+      comm_->println(anem_->read_pressure());
+      return 0;
+    }else if (cmd=="PT"){
+      comm_->println("1");
+      comm_->println(anem_->read_bmp_temperature());
+      return 0;
+    }else if (cmd=="H"){
+      comm_->println("1");
+      comm_->println(anem_->read_humidity());
+      return 0;
+    }else if (cmd=="HT"){
+      comm_->println("1");
+      comm_->println(anem_->read_dht_temperature());
+      return 0;
+    }else if (cmd[0]=='T'){
+      uint8_t itemp = cmd[1] - '0';
+      if (itemp < 3){
+        comm_->println("1");
+        comm_->println(anem_->read_temperature(itemp));
+        return 0;
+      }else{
+        return 1;
+      }
+    }else if (cmd[0] == 'A' && cmd[1] == 'I'){
+      uint8_t ich = cmd[2] - '0'; 
+      if (ich < 4){
+        comm_->println("1");
+        comm_->println(anem_->read_aichan(ich));
+      }
+        
+    }
+  }
   
   void envconds(){
     comm_->println(5);
@@ -173,7 +212,13 @@ public:
         comm_->println("OK");
       }
     }else if (line.startsWith("SCAN")){
-      scan();          
+      scan();     
+    }else if (line.startsWith("READ")){
+      if (readcmd(line.substring(5))){
+        comm_->println("ERR");     
+      }else{
+        comm_->println("OK");
+      }
     }else if (line.startsWith("ENV")){
       envconds();
     }else if (line=="STATUS"){

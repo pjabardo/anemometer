@@ -59,6 +59,9 @@ float Anemometer::read_temperature(uint8_t idx){
   return temp_.getTempC(temp_probes[idx]);
   
 }
+int16_t Anemometer::read_aichan(uint8_t idx){
+  return daq_.readADC_SingleEnded(idx);
+}
 
 void Anemometer::read_frame(int16_t *adcx){
   for (uint8_t i  = 0; i < nch_; ++i)
