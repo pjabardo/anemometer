@@ -11,52 +11,54 @@
 #include <Adafruit_ADS1X15.h>
 #include <DHT.h>
 
+const uint8_t MAXTCHANS = 8;
 class Anemometer
 {
 protected:
-  uint8_t bmp_addr_;
-  uint8_t dht_pin_;
-  uint8_t dht_type_;
-  uint8_t temp_pin_;
-  uint8_t daq_addr_;
-  adsGain_t gain_;
-  uint8_t temp_resolution_;
+  uint8_t _bmp_addr;
+  uint8_t _dht_pin;
+  uint8_t _dht_type;
+  uint8_t _temp_pin;
+  uint8_t _daq_addr;
+  adsGain_t _gain;
+  uint8_t _temp_resolution;
 
-  int8_t ich_[4]; // AI channels that should be read
-  uint8_t nch_; // Number of AI channels that should be read
+  int8_t _ich[4]; // AI channels that should be read
+  uint8_t _nch; // Number of AI channels that should be read
   
-  OneWire one_wire_;
-  Adafruit_BMP280 bmp_;
-  Adafruit_ADS1115 daq_;
-  DallasTemperature temp_;
-  DHT dht_;
+  OneWire _one_wire;
+  Adafruit_BMP280 _bmp;
+  Adafruit_ADS1115 _daq;
+  DallasTemperature _temp;
+  DHT _dht;
   
 public:
   Anemometer(uint8_t bmp_addr=0x76, uint8_t dht_pin=33, uint8_t dht_type=DHT22, 
             uint8_t temp_pin=23, uint8_t daq_addr=0x4A, adsGain_t gain=GAIN_TWO,
             uint8_t temp_resolution=12):
-            bmp_addr_(bmp_addr), dht_pin_(dht_pin), dht_type_(dht_type), 
-            temp_pin_(temp_pin), daq_addr_(daq_addr), gain_(gain), 
-            temp_resolution_(temp_resolution), bmp_(), dht_(dht_pin, dht_type), 
-            one_wire_(temp_pin), daq_(), temp_(&one_wire_){}
+            _bmp_addr(bmp_addr), _dht_pin(dht_pin), _dht_type(dht_type), 
+            _temp_pin(temp_pin), _daq_addr(daq_addr), _gain(gain), 
+            _temp_resolution(temp_resolution), _bmp(), _dht(dht_pin, dht_type), 
+            _one_wire(temp_pin), _daq(), _temp(&_one_wire){}
    
   void setup_anemometer();
+  void setup_temperature();
+  
+  float read_dht_temperature(bool S = false, bool force = false);
+  float read_humidity(bool force = false);
 
-   float read_dht_temperature(bool S = false, bool force = false);
-   float read_humidity(bool force = false);
+  float read_bmp_temperature();
+  float read_pressure();
 
-   float read_bmp_temperature();
-   float read_pressure();
-
-   float read_temperature(uint8_t idx);
-   int16_t read_aichan(uint8_t idx);
+  float read_temperature(uint8_t idx);
+  int16_t read_aichan(uint8_t idx);
    
-   void read_frame(int16_t *adcx);
+  void read_frame(int16_t *adcx);
 
-   uint8_t ai_chans(int8_t i0=0, int8_t i1=-1, int8_t i2=-1, int8_t i3=-1);
+  uint8_t ai_chans(int8_t i0=0, int8_t i1=-1, int8_t i2=-1, int8_t i3=-1);
 
-   uint8_t numchans(){ return nch_; }
-   int8_t* chanidx(){ return ich_; }
+  uint8_t numchans(){ return _nch; }
+  int8_t* chanidx(){ return _ich; }
 };
 
   
@@ -64,38 +66,41 @@ template <typename Comm>
 class AnemometerComm
 {
 protected:
-  Comm *comm_;  // Handles communication with computer
-  Anemometer *anem_; // Handles data acquisition
-  uint16_t fps_;  // Number of samples that should be read
-  uint16_t avg_; // Number of samples that should be averaged
-  int32_t frame_[4]; // Place to store the samples read
-  char buffer_[32]; // Buffer
+  Comm *_comm;  // Handles communication with computer
+  Anemometer *_anem; // Handles data acquisition
+  uint16_t _fps;  // Number of samples that should be read
+  uint16_t _avg; // Number of samples that should be averaged
+  int32_t _frame[4]; // Place to store the samples read
+  char _buffer[32]; // Buffer
+  DeviceAddress _taddr[MAXTCHANS];   // Stores DS18B20 addresses
+  uint8_t _ntchans; // Number of temperature sensors actually present 
+  uint8_t _tchans[MAXTCHANS]; // Temperature sensors
   
 public:
   AnemometerComm(Comm *comm, Anemometer *anem):
-    comm_(comm), anem_(anem){fps_=1; avg_=1;}
+    _comm(comm), _anem(anem){_fps=1; _avg=1;}
   
   void set_comm(Comm *comm=0){
-    comm_ = comm;
+    _comm = comm;
   }
   
   bool available(){
-    return comm_->available();
+    return _comm->available();
   }
   void set_avg(uint16_t avg){
     if (avg > 2000)
       avg = 1000;
-    avg_ = avg;
+    _avg = avg;
   }
 
   void set_fps(uint16_t fps){
-    fps_ = fps;
+    _fps = fps;
   }
 
   int parse_setvar(String cmd){
     int x;
     cmd.trim();
-    comm_->println(cmd);
+    _comm->println(cmd);
     int idx = cmd.indexOf(' ');
     if (idx < 0){
       return 1;
@@ -128,28 +133,28 @@ public:
 
   int readcmd(String cmd){
     cmd.trim();
-    comm_->println(cmd);
+    _comm->println(cmd);
     if (cmd=="P"){
-      comm_->println("1");
-      comm_->println(anem_->read_pressure());
+      _comm->println("1");
+      _comm->println(_anem->read_pressure());
       return 0;
     }else if (cmd=="PT"){
-      comm_->println("1");
-      comm_->println(anem_->read_bmp_temperature());
+      _comm->println("1");
+      _comm->println(_anem->read_bmp_temperature());
       return 0;
     }else if (cmd=="H"){
-      comm_->println("1");
-      comm_->println(anem_->read_humidity());
+      _comm->println("1");
+      _comm->println(_anem->read_humidity());
       return 0;
     }else if (cmd=="HT"){
-      comm_->println("1");
-      comm_->println(anem_->read_dht_temperature());
+      _comm->println("1");
+      _comm->println(_anem->read_dht_temperature());
       return 0;
     }else if (cmd[0]=='T'){
       uint8_t itemp = cmd[1] - '0';
       if (itemp < 3){
-        comm_->println("1");
-        comm_->println(anem_->read_temperature(itemp));
+        _comm->println("1");
+        _comm->println(_anem->read_temperature(itemp));
         return 0;
       }else{
         return 1;
@@ -157,74 +162,74 @@ public:
     }else if (cmd[0] == 'A' && cmd[1] == 'I'){
       uint8_t ich = cmd[2] - '0'; 
       if (ich < 4){
-        comm_->println("1");
-        comm_->println(anem_->read_aichan(ich));
+        _comm->println("1");
+        _comm->println(_anem->read_aichan(ich));
       }
         
     }
   }
   
   void envconds(){
-    comm_->println(5);
-    comm_->println(anem_->read_pressure());
-    comm_->println(anem_->read_humidity());
+    _comm->println(5);
+    _comm->println(_anem->read_pressure());
+    _comm->println(_anem->read_humidity());
     for (int i = 0; i < 3; ++i)
-      comm_->println(anem_->read_temperature(i));
-    comm_->println("OK");
+      _comm->println(_anem->read_temperature(i));
+    _comm->println("OK");
   }
 
   void scan(){
     int16_t fr[4];
-    uint8_t nch = anem_->numchans();
+    uint8_t nch = _anem->numchans();
     
-    comm_->println(fps_);
-    comm_->println(nch);
+    _comm->println(_fps);
+    _comm->println(nch);
     
     unsigned long t1 = millis();
-    for (int i = 0; i < fps_; ++i){
+    for (int i = 0; i < _fps; ++i){
       for (int k = 0; k < nch; ++k){
-        frame_[k] = 0;
+        _frame[k] = 0;
       }
-      for (int j = 0; j < avg_; ++j){
-        anem_->read_frame(fr);
+      for (int j = 0; j < _avg; ++j){
+        _anem->read_frame(fr);
         for (int k = 0; k < nch; ++k){
-          frame_[k] += fr[k];
+          _frame[k] += fr[k];
         }
       }
       for (int k = 0; k < nch; ++k){
-        comm_->println(frame_[k] / avg_);
+        _comm->println(_frame[k] / _avg);
       }
     }
-    comm_->println( (millis() - t1) / 1000.0);
-    comm_->println("OK");
+    _comm->println( (millis() - t1) / 1000.0);
+    _comm->println("OK");
   }
   
   void repl(){
     String line;
     // Let's read a lines of input
-    line = comm_->readStringUntil('\n');
+    line = _comm->readStringUntil('\n');
     line.trim();
     line.toUpperCase();
     if (line.startsWith("SET")){
       if (parse_setvar(line.substring(3))){
-        comm_->println("ERR");
+        _comm->println("ERR");
       }else{
-        comm_->println("OK");
+        _comm->println("OK");
       }
     }else if (line.startsWith("SCAN")){
       scan();     
     }else if (line.startsWith("READ")){
       if (readcmd(line.substring(5))){
-        comm_->println("ERR");     
+        _comm->println("ERR");     
       }else{
-        comm_->println("OK");
+        _comm->println("OK");
       }
     }else if (line.startsWith("ENV")){
       envconds();
     }else if (line=="STATUS"){
-      comm_->println("OK");
+      _comm->println("OK");
     }else{
-      comm_->println("ERR");
+      _comm->println("ERR");
     }
   }
        

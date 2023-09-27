@@ -9,63 +9,68 @@ DeviceAddress temp_probes[] ={ { 0x28, 0x8D, 0xFA, 0x79, 0x97, 0x09, 0x03, 0x9C 
 void Anemometer::setup_anemometer()
 {
   // Humidity sensor
-  dht_.begin();
+  _dht.begin();
 
   // BMP280
-  if (!bmp_.begin(bmp_addr_)){
+  if (!_bmp.begin(_bmp_addr)){
     // I still don't know what to do in case of failure...
   }
-  bmp_.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+  _bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                    Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                    Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   
 
-  daq_.setGain(gain_);
+  _daq.setGain(_gain);
   
-  if (!daq_.begin(daq_addr_)) {
+  if (!_daq.begin(_daq_addr)) {
     return;
   }
 
-  temp_.begin();  // DS18b20 temperature sensors
-  temp_.setResolution(temp_resolution_);
+  _temp.begin();  // DS18b20 temperature sensors
+  _temp.setResolution(_temp_resolution);
 
-  ich_[0] = 0;
-  ich_[1] = 1;
-  ich_[2] = 2;
-  ich_[3] = 3;
-  nch_ = 1;
+  _ich[0] = 0;
+  _ich[1] = 1;
+  _ich[2] = 2;
+  _ich[3] = 3;
+  _nch = 1;
+  
+}
+
+void Anemometer::setup_temperature(){
+
   
 }
 
 float Anemometer::read_dht_temperature(bool S, bool force){
-  return dht_.readTemperature();
+  return _dht.readTemperature();
 }
 float Anemometer::read_humidity(bool force){
-  return dht_.readHumidity();
+  return _dht.readHumidity();
 }
 
 float Anemometer::read_bmp_temperature(){
-  return bmp_.readTemperature(); 
+  return _bmp.readTemperature(); 
 }
 
 float Anemometer::read_pressure(){
-  return bmp_.readPressure();
+  return _bmp.readPressure();
 }
 
 float Anemometer::read_temperature(uint8_t idx){
-  temp_.requestTemperaturesByAddress(temp_probes[idx]);
-  return temp_.getTempC(temp_probes[idx]);
+  _temp.requestTemperaturesByAddress(temp_probes[idx]);
+  return _temp.getTempC(temp_probes[idx]);
   
 }
 int16_t Anemometer::read_aichan(uint8_t idx){
-  return daq_.readADC_SingleEnded(idx);
+  return _daq.readADC_SingleEnded(idx);
 }
 
 void Anemometer::read_frame(int16_t *adcx){
-  for (uint8_t i  = 0; i < nch_; ++i)
-    adcx[i] = daq_.readADC_SingleEnded(i);
+  for (uint8_t i  = 0; i < _nch; ++i)
+    adcx[i] = _daq.readADC_SingleEnded(i);
 }
 
 
@@ -86,9 +91,9 @@ uint8_t Anemometer::ai_chans(int8_t i0, int8_t i1, int8_t i2, int8_t i3)
   if (i3 >= 0 && i3 < 4)
     ich[nch++] = i3;
 
-  nch_ = nch;
+  _nch = nch;
   for (int k = 0; k < 4; ++k)
-    ich_[k] = ich[k];
+    _ich[k] = ich[k];
   
   return 0;   
   
