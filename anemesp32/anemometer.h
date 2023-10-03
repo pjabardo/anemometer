@@ -20,11 +20,16 @@ protected:
   uint8_t _dht_type;
   uint8_t _temp_pin;
   uint8_t _daq_addr;
-  adsGain_t _gain;
-  uint8_t _temp_resolution;
 
+  uint8_t _temp_resolution;
+  DeviceAddress _taddr[MAXTCHANS];   // Stores DS18B20 addresses
+  uint8_t _tch[MAXTCHANS];   // Channels available
+  uint8_t _ntch; // Number temperature sensors
+  
+  adsGain_t _gain;
   int8_t _ich[4]; // AI channels that should be read
   uint8_t _nch; // Number of AI channels that should be read
+  
   
   OneWire _one_wire;
   Adafruit_BMP280 _bmp;
@@ -59,6 +64,13 @@ public:
 
   uint8_t numchans(){ return _nch; }
   int8_t* chanidx(){ return _ich; }
+  int  chanidx(uint8_t i);
+  void clear_aichans();
+  int add_aichan(uint8_t idx);
+  
+  uint8_t tempres(){ return _temp_resolution; }
+  uint8_t *tempaddr(uint8_t itemp);
+  void set_temp_res(uint8_t tres);
 };
 
   
@@ -72,9 +84,9 @@ protected:
   uint16_t _avg; // Number of samples that should be averaged
   int32_t _frame[4]; // Place to store the samples read
   char _buffer[32]; // Buffer
-  DeviceAddress _taddr[MAXTCHANS];   // Stores DS18B20 addresses
   uint8_t _ntchans; // Number of temperature sensors actually present 
   uint8_t _tchans[MAXTCHANS]; // Temperature sensors
+
   
 public:
   AnemometerComm(Comm *comm, Anemometer *anem):
@@ -96,14 +108,14 @@ public:
   void set_fps(uint16_t fps){
     _fps = fps;
   }
-
+  
   int parse_setvar(String cmd){
     int x;
     cmd.trim();
     _comm->println(cmd);
     int idx = cmd.indexOf(' ');
     if (idx < 0){
-      return 1;
+      return -101;
     }
     String var = cmd.substring(0, idx);
     String val = cmd.substring(idx+1);
@@ -123,14 +135,44 @@ public:
       }else{
         set_avg(x);
       }
-      
+    }else if (var=="TRES"){
+      x = val.toInt();
+      _anem->set_temp_res(x);
     }else{
-      return 1;
+      return -102;
     }
 
     return 0;
   }
 
+  int parse_list_var(String cmd)
+  {
+    cmd.trim();
+    _comm->println(cmd);
+    if (cmd=="AI"){
+      _comm->println(2);
+      _comm->println(_avg);
+      _comm->println(_fps);
+      return 0;
+    }else if (cmd=="TRES"){
+      _comm->println(1);
+      _comm->println(_anem->tempres());
+      return 0;
+    }else if (cmd == "AI"){
+      _comm->println(cmd);
+      _comm->println(_anem->numchans());
+      for (uint8_t i = 0; i < _anem->numchans(); ++i){
+        _comm->println(_anem->chanidx(i));
+      }
+      return 0;
+    }else if (cmd == "TEMP"){
+      
+    }else{
+      return -301;
+    }
+    
+  }
+  
   int readcmd(String cmd){
     cmd.trim();
     _comm->println(cmd);
@@ -157,14 +199,20 @@ public:
         _comm->println(_anem->read_temperature(itemp));
         return 0;
       }else{
-        return 1;
+        return -401;
       }
     }else if (cmd[0] == 'A' && cmd[1] == 'I'){
       uint8_t ich = cmd[2] - '0'; 
+      int16_t aival;
       if (ich < 4){
+        aival = _anem->read_aichan(ich);
         _comm->println("1");
-        _comm->println(_anem->read_aichan(ich));
+        _comm->println(aival);
+        return 0;
+      }else{
+        return -402;
       }
+      
         
     }
   }
@@ -185,7 +233,7 @@ public:
     _comm->println(_fps);
     _comm->println(nch);
     
-    unsigned long t1 = millis();
+    unsigned long t1 = micros();
     for (int i = 0; i < _fps; ++i){
       for (int k = 0; k < nch; ++k){
         _frame[k] = 0;
@@ -196,45 +244,108 @@ public:
           _frame[k] += fr[k];
         }
       }
+      _comm->print(i);
+      _comm->print(" ");
+      _comm->print( (micros() - t1) / 1e6);
       for (int k = 0; k < nch; ++k){
-        _comm->println(_frame[k] / _avg);
+        _comm->print(" ");
+        _comm->print(_frame[k] / _avg);
+      }
+      _comm->println("");
+      if (_comm->available()){
+        char ch = _comm->read();
+        if (ch == '!'){
+          _comm->readStringUntil('\n');
+          _comm->println("OK");
+          delay(200);
+          _comm->println(_comm->readString());
+        }else{
+          _comm->println("ERR");
+          _comm->println(-11);
+          delay(200);
+          _comm->println(_comm->readString());
+        }
+        return;
       }
     }
-    _comm->println( (millis() - t1) / 1000.0);
     _comm->println("OK");
+    
   }
   
   void repl(){
     String line;
+    String cmd;
+    int err;
     // Let's read a lines of input
     line = _comm->readStringUntil('\n');
     line.trim();
     line.toUpperCase();
+    
     if (line.startsWith("SET")){
-      if (parse_setvar(line.substring(3))){
+      cmd = line.substring(4);
+      err = parse_setvar(cmd);
+      if (err){
         _comm->println("ERR");
+        _comm->println(err);
+        _comm->print(cmd);
+      }else{
+        _comm->println("OK");
+      }
+    }else if (line.startsWith("LIST")){
+      cmd = line.substring(5);
+      err = parse_list_var(cmd);
+      if (err){
+        _comm->println("ERR");
+        _comm->println(err);
+        _comm->println(cmd);
       }else{
         _comm->println("OK");
       }
     }else if (line.startsWith("SCAN")){
       scan();     
     }else if (line.startsWith("READ")){
-      if (readcmd(line.substring(5))){
+      cmd = line.substring(5);
+      err = readcmd(cmd);
+      if (err){
         _comm->println("ERR");     
+        _comm->println(err);
+        _comm->println(cmd);
       }else{
         _comm->println("OK");
       }
-    }else if (line.startsWith("ENV")){
-      envconds();
     }else if (line=="STATUS"){
       _comm->println("OK");
+    }else if (line.startsWith("CHANS")){
+      _comm->println(line);
+      _comm->println(_anem->numchans());
+      for (uint8_t i = 0; i < _anem->numchans(); ++i){
+          _comm->println(_anem->chanidx(i));      
+      }
+      _comm->println("OK");
+    }else if (line.startsWith("CLEARCHANS")){
+      _anem->clear_aichans();
+      _comm->println("OK");
+    }else if (line.startsWith("ADDCHAN")){
+      err = _anem->add_aichan(line.substring(8).toInt());
+      if (err){
+        _comm->println("ERR");
+        _comm->println(err);
+        _comm->println(line);
+      }else{
+        _comm->println("OK");
+      }
+      
     }else{
       _comm->println("ERR");
+      _comm->println(-1);
+      _comm->println(line);
     }
-  }
+   }
+    
+};
        
   
-};
+
 
 
 

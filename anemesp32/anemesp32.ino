@@ -64,7 +64,8 @@ void setup(){
 void loop(){
   WiFiClient client = server.available();
   delay(500);
-  
+
+
   if (client){
     client.setTimeout(1);
     Serial.println("Client connected!");
