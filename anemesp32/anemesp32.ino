@@ -12,13 +12,16 @@ Anemometer anem;
 AnemometerComm<HardwareSerial> comm(&Serial, &anem);
 
 void setup(){
+  pinMode(ONBOARD_LED,OUTPUT);
   Serial.begin(115200);
   anem.setup_anemometer();
+  
 }
 
 
 
 void loop(){
+  digitalWrite(ONBOARD_LED, LOW);
   if (comm.available()){
     comm.repl();
   }

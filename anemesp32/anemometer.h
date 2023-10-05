@@ -11,6 +11,9 @@
 #include <Adafruit_ADS1X15.h>
 #include <DHT.h>
 
+
+#define ONBOARD_LED 2
+
 const uint8_t MAXTCHANS = 8;
 class Anemometer
 {
@@ -229,19 +232,49 @@ public:
     _comm->println("OK");
   }
 
-  void scan(){
+  int scan(String cmd){
+
+    uint16_t fps, avg;
+    int idx;
+    cmd.trim();
+    if (cmd.length() == 0){
+      fps = _fps;
+      avg = _avg;
+    }else{
+      idx = cmd.indexOf(' ');
+      if (idx < 0){
+          fps = cmd.toInt();
+          if (fps <= 0){
+            return -401;
+          }
+          avg = _avg;
+      }else{
+        fps = cmd.substring(0, idx).toInt();
+        if (fps<=0){
+          return -401;
+        }
+        avg = cmd.substring(idx+1).toInt();
+        if (avg <= 0){
+          return -402;
+        }
+        
+      }
+    }
+    _comm->println("START");
     int16_t fr[4];
     uint8_t nch = _anem->numchans();
     
-    _comm->println(_fps);
+    _comm->println(fps);
     _comm->println(nch);
+    //Serial.println("LIGANDO LED");
+    //digitalWrite(ONBOARD_LED, HIGH);
     
     unsigned long t1 = micros();
-    for (int i = 0; i < _fps; ++i){
+    for (int i = 0; i < fps; ++i){
       for (int k = 0; k < nch; ++k){
         _frame[k] = 0;
       }
-      for (int j = 0; j < _avg; ++j){
+      for (int j = 0; j < avg; ++j){
         _anem->read_frame(fr);
         for (int k = 0; k < nch; ++k){
           _frame[k] += fr[k];
@@ -252,27 +285,27 @@ public:
       _comm->print( (micros() - t1) / 1e6);
       for (int k = 0; k < nch; ++k){
         _comm->print(" ");
-        _comm->print(_frame[k] / _avg);
+        _comm->print(_frame[k] / avg);
       }
       _comm->println("");
       if (_comm->available()){
+        //Serial.println("DESLIGANDO LED");
+       // digitalWrite(ONBOARD_LED, LOW);
         char ch = _comm->read();
         if (ch == '!'){
           _comm->readStringUntil('\n');
-          _comm->println("OK");
-          delay(200);
-          _comm->println(_comm->readString());
+          delay(50);
         }else{
-          _comm->println("ERR");
-          _comm->println(-11);
-          delay(200);
-          _comm->println(_comm->readString());
+          delay(50);
+          return -410;
         }
-        return;
+        return 0;
       }
     }
-    _comm->println("OK");
+  //Serial.println("DESLIGANDO LED");
+  //digitalWrite(ONBOARD_LED, LOW);
     
+  return 0;    
   }
   
   void repl(){
@@ -305,7 +338,14 @@ public:
         _comm->println("OK");
       }
     }else if (line.startsWith("SCAN")){
-      scan();     
+      err = scan(line.substring(5));     
+      if (err){
+        _comm->println("ERR");
+        _comm->println(err);
+        _comm->println(line);
+      }else{
+        _comm->println("OK");
+      }
     }else if (line.startsWith("READ")){
       cmd = line.substring(5);
       err = readcmd(cmd);
