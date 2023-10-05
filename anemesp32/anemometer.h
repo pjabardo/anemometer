@@ -23,8 +23,7 @@ protected:
 
   uint8_t _temp_resolution;
   DeviceAddress _taddr[MAXTCHANS];   // Stores DS18B20 addresses
-  uint8_t _tch[MAXTCHANS];   // Channels available
-  uint8_t _ntch; // Number temperature sensors
+  uint8_t _ntaddr; // Number of DS18b20 available in the line.
   
   adsGain_t _gain;
   int8_t _ich[4]; // AI channels that should be read
@@ -48,6 +47,8 @@ public:
    
   void setup_anemometer();
   void setup_temperature();
+  uint8_t load_temp_sensors();
+  
   
   float read_dht_temperature(bool S = false, bool force = false);
   float read_humidity(bool force = false);
@@ -70,7 +71,9 @@ public:
   
   uint8_t tempres(){ return _temp_resolution; }
   uint8_t *tempaddr(uint8_t itemp);
+  uint8_t numtemp(){ return _ntaddr; }
   void set_temp_res(uint8_t tres);
+  
 };
 
   
@@ -194,7 +197,7 @@ public:
       return 0;
     }else if (cmd[0]=='T'){
       uint8_t itemp = cmd[1] - '0';
-      if (itemp < 3){
+      if (itemp < _anem->numtemp() && itemp >= 0){
         _comm->println("1");
         _comm->println(_anem->read_temperature(itemp));
         return 0;
@@ -221,7 +224,7 @@ public:
     _comm->println(5);
     _comm->println(_anem->read_pressure());
     _comm->println(_anem->read_humidity());
-    for (int i = 0; i < 3; ++i)
+    for (uint8_t i = 0; i < _anem->numtemp(); ++i)
       _comm->println(_anem->read_temperature(i));
     _comm->println("OK");
   }
@@ -322,6 +325,10 @@ public:
           _comm->println(_anem->chanidx(i));      
       }
       _comm->println("OK");
+    }else if (line.startsWith("NUMCHANS")){
+      _comm->println(line);
+      _comm->println(_anem->numchans());
+      _comm->println("OK");
     }else if (line.startsWith("CLEARCHANS")){
       _anem->clear_aichans();
       _comm->println("OK");
@@ -334,7 +341,30 @@ public:
       }else{
         _comm->println("OK");
       }
-      
+    }else if(line.startsWith("LOADTEMP")){
+      _comm->println(line);
+      _comm->println(_anem->load_temp_sensors());
+      _comm->println("OK");
+    }else if (line.startsWith("NUMTEMP")){
+      _comm->println(line);
+      _comm->println(_anem->numtemp());
+      _comm->println("OK");
+    }else if (line.startsWith("TEMPCHANS")){
+      _comm->println(line);
+      _comm->println(_anem->numtemp());
+      for (uint8_t i = 0; i < _anem->numtemp(); ++i){
+        uint8_t *addr = _anem->tempaddr(i);
+        if (addr){
+          for (uint8_t k = 0; k < 8; ++k){
+            _comm->print(addr[k]);
+            _comm->print(" ");
+          }
+        }else{
+          _comm->print("0 0 0 0 0 0 0 0 ");
+        }
+        _comm->println("");
+      }
+      _comm->println("OK");
     }else{
       _comm->println("ERR");
       _comm->println(-1);

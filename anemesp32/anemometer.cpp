@@ -35,19 +35,35 @@ void Anemometer::setup_anemometer()
   _ich[2] = -1;
   _ich[3] = -1;
   _nch = 1;
-
+  load_temp_sensors();
 }
 
 void Anemometer::setup_temperature() {
   _temp.begin();  // DS18b20 temperature sensors
   _temp.setResolution(_temp_resolution);
-
-
-
+  load_temp_sensors();
 }
 
-uint8_t *tempaddr(uint8_t tch) {
-  //if (tch < 0 || tch >= MA
+uint8_t Anemometer::load_temp_sensors(){
+  _temp.begin();
+  _temp.setResolution(_temp_resolution);
+  _ntaddr = _temp.getDeviceCount();
+  
+  _ntaddr = (_ntaddr > MAXTCHANS) ? MAXTCHANS : _ntaddr;
+  
+  for (uint8_t i = 0; i < _ntaddr; ++i){
+    _temp.getAddress(_taddr[i], i);
+  }
+  
+  return _ntaddr;
+}
+uint8_t *Anemometer::tempaddr(uint8_t tch) {
+  if (tch < _ntaddr){
+    return _taddr[tch];
+  }else{
+    return 0;
+  }
+  
 }
 float Anemometer::read_dht_temperature(bool S, bool force) {
   return _dht.readTemperature();
@@ -65,8 +81,8 @@ float Anemometer::read_pressure() {
 }
 
 float Anemometer::read_temperature(uint8_t idx) {
-  _temp.requestTemperaturesByAddress(temp_probes[idx]);
-  return _temp.getTempC(temp_probes[idx]);
+  _temp.requestTemperaturesByAddress(_taddr[idx]);
+  return _temp.getTempC(_taddr[idx]);
 
 }
 int16_t Anemometer::read_aichan(uint8_t idx) {
