@@ -35,7 +35,7 @@ void loop(){
 #ifdef _USE_WIFI_
 #undef _USE_SERIAL_
 #undef _USE_BLUETOOTH_
-#define _ANEM_AP_ // ESP32 as accesspoint
+//#define _ANEM_AP_ // ESP32 as accesspoint
 
 #include<WiFi.h>
 const char *ssid = "tunel";
