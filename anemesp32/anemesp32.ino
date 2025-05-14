@@ -3,6 +3,7 @@
 Anemometer anem;
 //#define _USE_SERIAL_
 #define _USE_WIFI_
+
 //#define _USE_BLUETOOTH_
 
 #ifdef _USE_SERIAL_
@@ -38,6 +39,9 @@ void loop(){
 //#define _ANEM_AP_ // ESP32 as accesspoint
 
 #include<WiFi.h>
+//const char *ssid = "pjsjanem";
+//const char *password = "12345678";
+
 const char *ssid = "tunel";
 const char *password = "gvento123";
 
