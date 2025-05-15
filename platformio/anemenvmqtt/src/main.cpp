@@ -10,13 +10,12 @@ Anemometer anem;
 const char *ssid = "wifi";
 const char *password = "12345678";
 
-const char *mqtt_server = "192.168.0.100";
+const char *mqtt_server = "192.168.15.13";
 const uint16_t mqtt_port = 1883;
 
 WiFiClient esp_client;
 PubSubClient client(esp_client);
 
-//AnemometerComm<WiFiClient> comm(0, &anem);
 void callback(char *topic, byte* message, unsigned int length){
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
@@ -77,6 +76,8 @@ void loop(){
   if (!client.connected()) {
     reconnect();
   }
+  Serial.println(WiFi.localIP());
+
   uint8_t ntemp = anem.numtemp();
   float x;
 
