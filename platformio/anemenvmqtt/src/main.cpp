@@ -1,6 +1,5 @@
 
 #include "anemometer.h"
-#include <PubSubClient.h>
 
 Anemometer anem;
 
@@ -15,6 +14,8 @@ const uint16_t mqtt_port = 1883;
 
 WiFiClient esp_client;
 PubSubClient client(esp_client);
+const char *bname = "env";
+//MQTTAnem mqtt_anem(bname, 0, 0);
 
 void callback(char *topic, byte* message, unsigned int length){
   Serial.print("Message arrived on topic: ");
@@ -31,28 +32,6 @@ void callback(char *topic, byte* message, unsigned int length){
 }
 
 
-void setup(){
-  Serial.begin(9600);
-  
-  WiFi.begin(ssid, password);
-  Serial.println("\nConnecting");
-  while (WiFi.status() != WL_CONNECTED){
-    Serial.print(".");
-    delay(200);
-  }
-  Serial.println("\nConnected to the WiFi networkd");
-  Serial.print("\nLocal ESP32 IP: ");
-  Serial.println(WiFi.localIP());
-
-  client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
-
-  anem.setup_anemometer();
-  anem.setup_temperature();
-
-}
-
-
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
@@ -62,6 +41,9 @@ void reconnect() {
       Serial.println("conectado");
       // Subscribe
       //client.subscribe("esp32/output");
+      // Publish retained parameters
+      //mqtt_anem.publish_params();
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -72,59 +54,44 @@ void reconnect() {
   }
 }
 
+void setup(){
+  Serial.begin(9600);
+  
+  //WiFi.begin(ssid, password);
+  Serial.println("\nConnecting");
+  //while (WiFi.status() != WL_CONNECTED){
+  //  Serial.print(".");
+  //  delay(200);
+ // }
+  Serial.println("\nConnected to the WiFi networkd");
+  Serial.print("\nLocal ESP32 IP: ");
+  //Serial.println(WiFi.localIP());
+
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
+
+  anem.setup_anemometer();
+  anem.setup_temperature();
+  Serial.println("SETUP REALIZADO");
+  //mqtt_anem.initialize(&anem, &client);
+  //reconnect();
+}
+
+
+
 void loop(){
   if (!client.connected()) {
-    reconnect();
+    //reconnect();
+    Serial.println("TENTANDO RECONECTAR");
   }
   Serial.println(WiFi.localIP());
 
-  uint8_t ntemp = anem.numtemp();
-  float x;
+  Serial.print("P = ");
+  Serial.println(anem.read_pressure());
+  delay(500);
 
-  char buf[14]; // Buffer para armazenar números
-  client.loop();
+  //mqtt_anem.loop();
   
-  // Read pressure
-  x = anem.read_pressure();
-  dtostrf(x, 10, 2, buf);
-  Serial.print("Pa = ");
-  Serial.println(x);
-  client.publish("env/patm", buf);
-
-  // Ler umidade
-  x = anem.read_humidity();
-  dtostrf(x, 10, 3, buf);
-  Serial.print("H = ");
-  Serial.println(x);
-  client.publish("env/H", buf);
-
-  // Ler temperatura do sensor de umidade
-  x = anem.read_dht_temperature();
-  dtostrf(x, 10, 3, buf);
-  Serial.print("Th = ");
-  Serial.println(x);
-  client.publish("env/TH", buf);
-
-  // Ler os sensores de temperatura
-  x = anem.read_temperature(0);
-  dtostrf(x, 10, 3, buf);
-  Serial.print("T0 = ");
-  Serial.println(x);
-  client.publish("env/T0", buf);
-
-  // Ler os sensores de temperatura
-  x = anem.read_temperature(1);
-  dtostrf(x, 10, 3, buf);
-  Serial.print("T1 = ");
-  Serial.println(x);
-  client.publish("env/T1", buf);
-
-  // Ler os sensores de temperatura
-  x = anem.read_temperature(0);
-  dtostrf(x, 10, 3, buf);
-  Serial.print("T2 = ");
-  Serial.println(x);
-  client.publish("env/T2", buf);
 
 }
 

@@ -1,5 +1,7 @@
 
 
+#include<WiFi.h>
+
 #include "anemometer.h"
 
 DeviceAddress temp_probes[] = { { 0x28, 0x8D, 0xFA, 0x79, 0x97, 0x09, 0x03, 0x9C },
@@ -7,6 +9,18 @@ DeviceAddress temp_probes[] = { { 0x28, 0x8D, 0xFA, 0x79, 0x97, 0x09, 0x03, 0x9C
   { 0x28, 0xFF, 0xC1, 0xF8, 0x82, 0x15, 0x02, 0x48 }
 };
 
+Anemometer::Anemometer(uint8_t bmp_addr, uint8_t dht_pin, uint8_t dht_type, 
+            uint8_t temp_pin, uint8_t daq_addr, adsGain_t gain,
+            uint8_t temp_resolution):
+            _bmp_addr(bmp_addr), _dht_pin(dht_pin), _dht_type(dht_type), 
+            _temp_pin(temp_pin), _daq_addr(daq_addr), _gain(gain), 
+            _temp_resolution(temp_resolution), _bmp(), _dht(dht_pin, dht_type), 
+            _one_wire(temp_pin), _daq(), _temp(&_one_wire)
+{
+  setup_anemometer();
+  setup_temperature();
+
+}
 void Anemometer::setup_anemometer()
 {
   // Humidity sensor
@@ -35,7 +49,6 @@ void Anemometer::setup_anemometer()
   _ich[2] = -1;
   _ich[3] = -1;
   _nch = 1;
-  load_temp_sensors();
 }
 
 void Anemometer::setup_temperature() {
@@ -154,5 +167,112 @@ int8_t Anemometer::ai_chans(int8_t i0, int8_t i1, int8_t i2, int8_t i3)
     _ich[k] = ich[k];
 
   return 0;
+
+}
+
+
+
+
+MQTTAnem::MQTTAnem(const char *bname, Anemometer *anem, PubSubClient *client):
+      _anem(anem), _client(client), _bname(bname)
+{
+  // Let's save the retained variables:
+  char *topic = _buf;
+  char *buf   = _buf2;
+}
+
+
+
+void MQTTAnem::initialize(Anemometer *anem, PubSubClient *client){
+  _client = client;
+  _anem = _anem;
+}
+
+void MQTTAnem::publish_params()
+{
+  char *topic = _buf;
+  char *buf = _buf2;
+
+  _client->loop();
+
+  snprintf(topic, 31, "%s/P/S", _bname);
+  _client->publish(topic, "PT", true);
+  Serial.print(topic);
+  Serial.println("  PT");
+
+  snprintf(topic, 31, "%s/H/S", _bname);
+  _client->publish(topic, "HT", true);
+  Serial.print(topic);
+  Serial.println("  HT");
+
+  // Temperature sensors
+  snprintf(topic, 31, "%s/T/N", _bname);
+  snprintf(buf, 31, "%d", _anem->numtemp());
+  Serial.print(topic);
+  Serial.print("  N = ");
+  Serial.println(buf);
+  _client->publish(topic, buf, true);
+
+  // Write the Addresses of every DS18B20 temperature sensor
+  for (int i = 0; i < _anem->numtemp(); ++i){
+    snprintf(topic, 31, "%s/T/ID%d", _bname, i);
+    _client->publish(topic, _anem->tempaddr(i), 8, true);
+    Serial.print(topic);
+    Serial.print("  ");
+    Serial.println(i);
+  }
+
+  // Analog channels:
+  // Implement it later on...
+
+}
+
+void MQTTAnem::clear_buffer(char *b, int n)
+{
+  for (int i = 0; i < n; ++i)
+    b[i] = 0;
+}
+
+
+void MQTTAnem::loop()
+{
+  float x;
+  char *topic = _buf;
+  char *buf = _buf2;
+
+  _client->loop();
+
+  // Read pressure:
+  x = _anem->read_pressure();
+  Serial.println(x);
+  dtostrf(x, 10, 2, buf);
+  snprintf(topic, 31, "%s/P/P", _bname);
+  _client->publish("topic", buf);
+
+  x = _anem->read_bmp_temperature();
+  Serial.println(x);
+  dtostrf(x, 10, 3, buf);
+  snprintf(topic, 31, "%s/P/T", _bname);
+  _client->publish("topic", buf);
+
+  x = _anem->read_humidity();
+  Serial.println(x);
+  dtostrf(x, 10, 3, buf);
+  snprintf(topic, 31, "%s/H/H", _bname);
+  _client->publish("topic", buf);
+
+  x = _anem->read_dht_temperature();
+  Serial.println(x);
+  dtostrf(x, 10, 3, buf);
+  snprintf(topic, 31, "%s/H/T", _bname);
+  _client->publish("topic", buf);
+
+  for (int i = 0; i < _anem->numtemp(); ++i){
+    x = _anem->read_temperature(0);
+    Serial.println(x);
+    dtostrf(x, 10, 3, buf);
+    snprintf(topic, 31, "%s/T/T%d", _bname, i);
+    _client->publish("topic", buf);
+  }
 
 }

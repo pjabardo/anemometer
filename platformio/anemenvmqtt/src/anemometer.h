@@ -10,6 +10,7 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_ADS1X15.h>
 #include <DHT.h>
+#include <PubSubClient.h>
 
 
 #define ONBOARD_LED 2
@@ -42,11 +43,7 @@ protected:
 public:
   Anemometer(uint8_t bmp_addr=0x76, uint8_t dht_pin=33, uint8_t dht_type=DHT22, 
             uint8_t temp_pin=23, uint8_t daq_addr=0x4A, adsGain_t gain=GAIN_TWO,
-            uint8_t temp_resolution=12):
-            _bmp_addr(bmp_addr), _dht_pin(dht_pin), _dht_type(dht_type), 
-            _temp_pin(temp_pin), _daq_addr(daq_addr), _gain(gain), 
-            _temp_resolution(temp_resolution), _bmp(), _dht(dht_pin, dht_type), 
-            _one_wire(temp_pin), _daq(), _temp(&_one_wire){}
+            uint8_t temp_resolution=12);
    
   void setup_anemometer();
   void setup_temperature();
@@ -81,7 +78,22 @@ public:
 
   
 
+class MQTTAnem{
+  protected:
+    char _buf[32];
+    char _buf2[32];
 
+    Anemometer *_anem;
+    PubSubClient *_client;
+    const char *_bname;
+
+  public:
+    MQTTAnem(const char *bname, Anemometer *anem, PubSubClient *client);
+    void initialize(Anemometer *anem, PubSubClient *client);
+    void publish_params();
+    void clear_buffer(char *b, int n);
+    void loop();
+};
 
 
 

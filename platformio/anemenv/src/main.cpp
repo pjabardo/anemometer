@@ -1,8 +1,8 @@
 #include "anemometer.h"
 
 Anemometer anem;
-//#define _USE_SERIAL_
-#define _USE_WIFI_
+#define _USE_SERIAL_
+//#define _USE_WIFI_
 
 //#define _USE_BLUETOOTH_
 
