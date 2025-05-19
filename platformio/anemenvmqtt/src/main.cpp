@@ -1,36 +1,20 @@
+#include<WiFi.h>
 
-#include "anemometer.h"
+#include "mqtt_anem.h"
+
 
 Anemometer anem;
 
+const char *ssid = "rede-wifi";
+const char *password = "senhadarede";
 
-#include<WiFi.h>
-
-const char *ssid = "wifi";
-const char *password = "12345678";
-
-const char *mqtt_server = "192.168.15.13";
+const char *mqtt_server = "192.168.0.100";
 const uint16_t mqtt_port = 1883;
 
 WiFiClient esp_client;
 PubSubClient client(esp_client);
 const char *bname = "env";
-//MQTTAnem mqtt_anem(bname, 0, 0);
-
-void callback(char *topic, byte* message, unsigned int length){
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print(". Message: ");
-  String messageTemp;
-  
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
-    messageTemp += (char)message[i];
-  }
-  Serial.println();
-
-}
-
+MQTTAnem mqtt_anem(bname, &anem, &client);
 
 void reconnect() {
   // Loop until we're reconnected
@@ -54,44 +38,45 @@ void reconnect() {
   }
 }
 
+
 void setup(){
   Serial.begin(9600);
   
-  //WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
+  
   Serial.println("\nConnecting");
-  //while (WiFi.status() != WL_CONNECTED){
-  //  Serial.print(".");
-  //  delay(200);
- // }
-  Serial.println("\nConnected to the WiFi networkd");
+  Serial.println("\nConnecting");
+  while (WiFi.status() != WL_CONNECTED){
+    Serial.print(".");
+    delay(200);
+  }  
+  Serial.println("\nConnected to the WiFi network!");
+
   Serial.print("\nLocal ESP32 IP: ");
-  //Serial.println(WiFi.localIP());
+  Serial.println(WiFi.localIP());
 
   client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
-
+  
+  
   anem.setup_anemometer();
   anem.setup_temperature();
-  Serial.println("SETUP REALIZADO");
-  //mqtt_anem.initialize(&anem, &client);
-  //reconnect();
+
+  reconnect();
+  mqtt_anem.publish_params();
+
 }
 
 
 
 void loop(){
+
   if (!client.connected()) {
-    //reconnect();
-    Serial.println("TENTANDO RECONECTAR");
+    reconnect();
+    Serial.println(WiFi.localIP());
   }
-  Serial.println(WiFi.localIP());
 
-  Serial.print("P = ");
-  Serial.println(anem.read_pressure());
-  delay(500);
+  mqtt_anem.loop();
 
-  //mqtt_anem.loop();
-  
 
 }
 

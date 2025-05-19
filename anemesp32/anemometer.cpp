@@ -135,7 +135,7 @@ void Anemometer::set_temp_res(uint8_t tres){
 uint8_t Anemometer::ai_chans(int8_t i0, int8_t i1, int8_t i2, int8_t i3)
 {
   uint8_t nch = 0;
-  uint8_t ich[] = { -1, -1, -1, -1};
+  int8_t ich[] = { -1, -1, -1, -1};
 
   if (i0 >= 0 && i0 < 4)
     ich[nch++] = i0;
