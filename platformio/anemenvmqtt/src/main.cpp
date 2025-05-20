@@ -23,10 +23,6 @@ void reconnect() {
     // Attempt to connect
     if (client.connect("JAnem")) {
       Serial.println("conectado");
-      // Subscribe
-      //client.subscribe("esp32/output");
-      // Publish retained parameters
-      //mqtt_anem.publish_params();
 
     } else {
       Serial.print("failed, rc=");
