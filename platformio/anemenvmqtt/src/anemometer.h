@@ -10,7 +10,6 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_ADS1X15.h>
 #include <DHT.h>
-//#include <PubSubClient.h>
 
 
 #define ONBOARD_LED 2
@@ -66,6 +65,8 @@ public:
   void read_frame(int16_t *adcx);
 
   int8_t ai_chans(int8_t i0=0, int8_t i1=-1, int8_t i2=-1, int8_t i3=-1);
+
+  float ai_volts(int32_t c) { return _daq.computeVolts(c); }
 
   int8_t numchans(){ return _nch; }
   int8_t* chanidx(){ return _ich; }

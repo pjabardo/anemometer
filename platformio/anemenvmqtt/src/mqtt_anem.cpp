@@ -247,6 +247,15 @@ void MQTTAnem::publish_params()
   serial_print_topic(topic, "11");
   _client->subscribe(topic);
 
+  // Store UNITS
+  snprintf(topic, 31, "%s/P/UNIT", _bname);
+  _client->publish(topic, "Pa", true);
+  serial_print_topic(topic, "P -> Pa");
+
+  snprintf(topic, 31, "%s/P/TUNIT", _bname);
+  _client->publish(topic, "oC", true);
+  serial_print_topic(topic, "T -> oC");
+
   _client->loop();
 
   snprintf(topic, 31, "%s/H/CHANS", _bname);
@@ -254,6 +263,15 @@ void MQTTAnem::publish_params()
   dht_chans((char *) "11");
   serial_print_topic(topic, "11");
   _client->subscribe(topic);
+
+  snprintf(topic, 31, "%s/H/UNIT", _bname);
+  _client->publish(topic, "%", true);
+  serial_print_topic(topic, "H -> %");
+
+  snprintf(topic, 31, "%s/H/TUNIT", _bname);
+  _client->publish(topic, "oC", true);
+  serial_print_topic(topic, "T -> oC");
+
 
   _client->loop();
 
@@ -283,6 +301,23 @@ void MQTTAnem::publish_params()
   serial_print_topic(topic, buf);
   _client->subscribe(topic);
   _client->loop();
+
+  snprintf(topic, 31, "%s/AI/GAIN", _bname);
+  snprintf(buf, 31, "2");
+  _client->publish(topic, buf, true);
+
+  snprintf(topic, 31, "%s/AI/RANGE", _bname);
+  snprintf(buf, 31, "2.048");
+  _client->publish(topic, buf, true);
+
+  snprintf(topic, 31, "%s/AI/COUNTS", _bname);
+  snprintf(buf, 31, "32768");
+  _client->publish(topic, buf, true);
+
+  snprintf(topic, 31, "%s/AI/UNIT", _bname);
+  snprintf(buf, 31, "V");
+  _client->publish(topic, buf, true);
+
   
   // Temperature sensors
   uint8_t nt = _anem->numtemp();
@@ -314,6 +349,11 @@ void MQTTAnem::publish_params()
     //serial_print_topic(topic, buf);
 
   }
+
+  snprintf(topic, 31, "%s/T/UNIT", _bname);
+  _client->publish(topic, "oC", true);
+  serial_print_topic(topic, "T -> oC");
+
   _client->loop();
 
 }
@@ -373,7 +413,8 @@ void MQTTAnem::loop()
     for (uint8_t  i = 0; i < nch; ++i){
       uint8_t idx = _anem->chanidx(i);
       snprintf(topic, 31, "%s/AI/AI%d", _bname, idx);
-      snprintf(buf, 31, "%d", fr[i]);
+      x = _anem->ai_volts(fr[i]); // Calculate the voltage
+      dtostrf(x, 12, 6, buf);
       _client->publish(topic, buf);
       serial_print_topic(topic, buf);
     }
