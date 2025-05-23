@@ -240,11 +240,12 @@ void MQTTAnem::publish_params()
   char *buf = _buf2;
 
   _client->loop();
-
+  // Read only the pressure. 
+  // The temperature is not very good: the board is heated...
   snprintf(topic, 31, "%s/P/CHANS", _bname);
-  _client->publish(topic, "11", true);
-  bmp_chans((char *) "11");
-  serial_print_topic(topic, "11");
+  _client->publish(topic, "10", true);
+  bmp_chans((char *) "10");
+  serial_print_topic(topic, "10");
   _client->subscribe(topic);
 
   // Store UNITS
@@ -275,6 +276,7 @@ void MQTTAnem::publish_params()
 
   _client->loop();
 
+  // We will not read the analog inputs.
   snprintf(topic, 31, "%s/AI/N", _bname);
   snprintf(buf, 31, "%d", _anem->numchans());
   _client->publish(topic, buf, true);
@@ -286,7 +288,7 @@ void MQTTAnem::publish_params()
   for (uint8_t i = 0; i < 4; ++i){
     buf[i] = '0';
   }
-  buf[0] = '1';
+  buf[0] = '0';
   buf[4] = 0;
   ai_chans(buf);
   _client->publish(topic, buf, true);

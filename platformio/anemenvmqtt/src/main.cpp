@@ -5,10 +5,10 @@
 
 Anemometer anem;
 
-const char *ssid = "rede-wifi";
-const char *password = "senhadarede";
+const char *ssid = "durruti";//"rede-wifi";
+const char *password = "ginzburglanda";//"senhadarede";
 
-const char *mqtt_server = "192.168.0.100";
+const char *mqtt_server = "192.168.15.13";//"192.168.0.100";
 const uint16_t mqtt_port = 1883;
 
 WiFiClient esp_client;
@@ -40,7 +40,6 @@ void setup(){
   
   WiFi.begin(ssid, password);
   
-  Serial.println("\nConnecting");
   Serial.println("\nConnecting");
   while (WiFi.status() != WL_CONNECTED){
     Serial.print(".");
