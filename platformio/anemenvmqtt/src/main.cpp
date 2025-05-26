@@ -5,11 +5,13 @@
 
 Anemometer anem;
 
-const char *ssid = "durruti";//"rede-wifi";
-const char *password = "ginzburglanda";//"senhadarede";
-
-const char *mqtt_server = "192.168.15.13";//"192.168.0.100";
+const char *ssid = "rede-wifi";
+const char *password = "senhadarede";
+const char *mqtt_server = "192.168.0.180";
 const uint16_t mqtt_port = 1883;
+
+const char *mqtt_user = "usuariomqtt";
+const char *mqtt_password = "senhamqtt";
 
 WiFiClient esp_client;
 PubSubClient client(esp_client);
@@ -21,9 +23,9 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Tentando conectar com o Broker do MQTT ...");
     // Attempt to connect
-    if (client.connect("JAnem")) {
+    if (client.connect("JAnem", mqtt_user, mqtt_password)) {
       Serial.println("conectado");
-
+      mqtt_anem.publish_params();
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -57,7 +59,7 @@ void setup(){
   anem.setup_temperature();
 
   reconnect();
-  mqtt_anem.publish_params();
+  
 
 }
 
