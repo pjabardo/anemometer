@@ -6,6 +6,8 @@ DeviceAddress temp_probes[] = { { 0x28, 0x8D, 0xFA, 0x79, 0x97, 0x09, 0x03, 0x9C
   { 0x28, 0xFF, 0x8E, 0xDE, 0x82, 0x15, 0x02, 0xB7 },
   { 0x28, 0xFF, 0xC1, 0xF8, 0x82, 0x15, 0x02, 0x48 }
 };
+float erra_t[] = {1, 1, 1, 1, 1, 1, 1, 1};
+float errb_t[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 void Anemometer::setup_anemometer()
 {
@@ -41,6 +43,26 @@ void Anemometer::setup_temperature() {
   _temp.begin();  // DS18b20 temperature sensors
   _temp.setResolution(_temp_resolution);
   load_temp_sensors();
+
+  // Identify the registered temperature sensors:
+  for (uint8_t i = 0; i < MAXTCHANS; ++i){
+    regtemp[i] = -1;
+  }
+
+  for (uint8_t i = 0; i < _ntaddr; ++i){
+    for (uint8_t k = 0; k < NTREG; ++k){
+      bool eq = true;
+      for (uint8_t j = 0; j < 8; ++j){
+        if (_taddr[i][j] != temp_probes[k][j]){
+          eq = false;
+          break;
+        }
+      }
+      if (eq){
+        regtemp[i] = k;
+      }
+    }
+  }
 }
 
 uint8_t Anemometer::load_temp_sensors(){
@@ -54,6 +76,7 @@ uint8_t Anemometer::load_temp_sensors(){
     _temp.getAddress(_taddr[i], i);
   }
   
+  // Set
   return _ntaddr;
 }
 uint8_t *Anemometer::tempaddr(uint8_t tch) {
@@ -76,12 +99,20 @@ float Anemometer::read_bmp_temperature() {
 }
 
 float Anemometer::read_pressure() {
-  return _bmp.readPressure();
+  return _bmp.readPressure() - 368.5;
 }
 
 float Anemometer::read_temperature(uint8_t idx) {
-  _temp.requestTemperaturesByAddress(_taddr[idx]);
-  return _temp.getTempC(_taddr[idx]);
+   _temp.requestTemperaturesByAddress(_taddr[idx]);
+   float T = _temp.getTempC(_taddr[idx]);
+  
+   int8_t idreg = regtemp[idx];
+  
+  if (idreg >= 0){
+    // Temp sensor is registered. Correct it!
+    T = erra_t[idreg]*T + errb_t[idreg];
+  }
+  return T;
 
 }
 int16_t Anemometer::read_aichan(uint8_t idx) {

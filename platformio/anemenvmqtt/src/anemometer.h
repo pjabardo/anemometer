@@ -14,6 +14,10 @@
 
 #define ONBOARD_LED 2
 
+const uint8_t NTREG = 3;
+
+
+
 const uint8_t MAXTCHANS = 8;
 class Anemometer
 {
@@ -26,12 +30,12 @@ protected:
 
   uint8_t _temp_resolution;
   DeviceAddress _taddr[MAXTCHANS];   // Stores DS18B20 addresses
+
   uint8_t _ntaddr; // Number of DS18b20 available in the line.
   
   adsGain_t _gain;
   int8_t _ich[4]; // AI channels that should be read
   uint8_t _nch; // Number of AI channels that should be read
-  
   
   OneWire _one_wire;
   Adafruit_BMP280 _bmp;
@@ -47,7 +51,7 @@ public:
             _temp_pin(temp_pin), _daq_addr(daq_addr), _gain(gain), 
             _temp_resolution(temp_resolution), _bmp(), _dht(dht_pin, dht_type), 
             _one_wire(temp_pin), _daq(), _temp(&_one_wire){}
-   
+
   void setup_anemometer();
   void setup_temperature();
   uint8_t load_temp_sensors();
@@ -78,7 +82,8 @@ public:
   uint8_t *tempaddr(uint8_t itemp);
   uint8_t numtemp(){ return _ntaddr; }
   void set_temp_res(uint8_t tres);
-  
+  int8_t regtemp[MAXTCHANS];
+
 };
 
   
