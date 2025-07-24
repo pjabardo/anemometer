@@ -426,7 +426,7 @@ void MQTTAnem::loop()
   nch = _anem->numtemp();
   for (int i = 0; i < nch; ++i){
     if (_t[i]){
-      x = _anem->read_temperature(0);
+      x = _anem->read_temperature(i);
       dtostrf(x, 10, 3, buf);
       snprintf(topic, 31, "%s/T/T%d", _bname, i);
       _client->publish(topic, buf);
